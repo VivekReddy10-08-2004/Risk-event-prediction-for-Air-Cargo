@@ -38,5 +38,4 @@ pip install -r requirements.txt
 
 3. Open `Ai_cargo_risk_level.ipynb` and run all cells.
 
-## Suggested Resume Bullet
-Designed an end-to-end air cargo risk classification pipeline with imbalance-aware modeling (SMOTE + Random Forest), improving risk-event detection and translating top feature drivers into actionable logistics controls.
+
