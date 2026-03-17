@@ -1,0 +1,8 @@
+air_cargo_ops:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      path: ./air_cargo_ops.duckdb
+      threads: 4
+      schema: analytics

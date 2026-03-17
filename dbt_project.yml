@@ -1,0 +1,37 @@
+name: air_cargo_ops
+version: 1.0.0
+config-version: 2
+
+profile: air_cargo_ops
+
+model-paths: ["models"]
+analysis-paths: ["analyses"]
+test-paths: ["tests"]
+seed-paths: ["seeds"]
+macro-paths: ["macros"]
+snapshot-paths: ["snapshots"]
+
+target-path: "target"
+clean-targets:
+  - "target"
+  - "dbt_packages"
+
+vars:
+  raw_csv_path: "air_cargo_items.csv"
+  high_value_quantile: 0.80
+  min_route_shipments: 25
+  risk_rate_weight: 0.60
+  profit_weight: 0.25
+  disruption_weight: 0.15
+
+models:
+  air_cargo_ops:
+    bronze:
+      +materialized: view
+      +schema: bronze
+    silver:
+      +materialized: table
+      +schema: silver
+    gold:
+      +materialized: table
+      +schema: gold

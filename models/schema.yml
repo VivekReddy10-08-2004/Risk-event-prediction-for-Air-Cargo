@@ -1,0 +1,246 @@
+version: 2
+
+models:
+  - name: br_air_cargo_raw
+    description: Raw ingest from local air cargo CSV.
+    meta:
+      group_label: Bronze
+    columns:
+      - name: category
+        description: Raw cargo category from source file.
+      - name: dest_zone
+        description: Raw destination zone in source formatting.
+      - name: handling
+        description: Raw handling method as provided by source.
+      - name: risk_event
+        description: Binary risk label from source (1 indicates risk event).
+        tests:
+          - not_null
+
+  - name: stg_air_cargo_shipments
+    description: Cleaned and standardized shipment records with quality and disruption flags.
+    meta:
+      group_label: Silver
+    columns:
+      - name: category
+        description: Standardized cargo category.
+        meta:
+          dimension:
+            type: string
+            label: Cargo Category
+      - name: dest_zone
+        description: Standardized destination zone with missing values replaced.
+        meta:
+          dimension:
+            type: string
+            label: Destination Zone
+      - name: handling
+        description: Standardized handling method.
+        meta:
+          dimension:
+            type: string
+            label: Handling Type
+      - name: weather
+        description: Standardized weather condition.
+        meta:
+          dimension:
+            type: string
+            label: Weather Condition
+      - name: customs
+        description: Standardized customs condition.
+        meta:
+          dimension:
+            type: string
+            label: Customs Severity
+      - name: route_key
+        description: Composite route/ops key as destination, handling, and customs.
+        meta:
+          dimension:
+            type: string
+            label: Route Key
+        tests:
+          - not_null
+      - name: risk_event
+        description: Cleaned binary risk label.
+        meta:
+          dimension:
+            type: number
+            label: Risk Event Flag
+          metrics:
+            risky_shipments:
+              type: sum
+              label: Risky Shipments
+        tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [0, 1]
+      - name: profit_usd
+        description: Shipment profit value in USD.
+        meta:
+          dimension:
+            type: number
+            label: Profit USD
+          metrics:
+            total_profit_usd:
+              type: sum
+              label: Total Profit USD
+            avg_profit_usd:
+              type: average
+              label: Average Profit USD
+
+  - name: mart_route_risk_profile
+    description: Gold mart with prioritized high-risk lanes from high-value shipment records.
+    meta:
+      group_label: Gold
+      label: Route Risk Profile
+    columns:
+      - name: route_priority_rank
+        description: Dense rank of routes by risk score and value exposure.
+        meta:
+          dimension:
+            type: number
+            label: Route Priority Rank
+        tests:
+          - not_null
+      - name: route_key
+        description: Route key for lane-level operational prioritization.
+        meta:
+          dimension:
+            type: string
+            label: Route Key
+      - name: dest_zone
+        description: Destination zone associated with the lane.
+        meta:
+          dimension:
+            type: string
+            label: Destination Zone
+      - name: handling
+        description: Handling mode associated with the lane.
+        meta:
+          dimension:
+            type: string
+            label: Handling Type
+      - name: customs
+        description: Customs severity class associated with the lane.
+        meta:
+          dimension:
+            type: string
+            label: Customs Severity
+      - name: risk_rate
+        description: Share of risky shipments for the lane in the high-value segment.
+        meta:
+          dimension:
+            type: number
+            label: Risk Rate
+          metrics:
+            avg_risk_rate:
+              type: average
+              label: Average Risk Rate
+      - name: risky_shipments
+        description: Count of risky high-value shipments for the lane.
+        meta:
+          dimension:
+            type: number
+            label: Risky Shipments
+          metrics:
+            total_risky_shipments:
+              type: sum
+              label: Total Risky Shipments
+      - name: high_value_shipments
+        description: Count of high-value shipments used in lane scoring.
+        meta:
+          dimension:
+            type: number
+            label: High Value Shipments
+          metrics:
+            total_high_value_shipments:
+              type: sum
+              label: Total High Value Shipments
+      - name: total_profit_usd
+        description: Total profit exposure for lane-level high-value shipments.
+        meta:
+          dimension:
+            type: number
+            label: Total Profit USD
+          metrics:
+            total_profit_usd:
+              type: sum
+              label: Total Profit USD
+      - name: route_risk_score
+        description: Composite weighted route risk score for prioritization.
+        meta:
+          dimension:
+            type: number
+            label: Route Risk Score
+          metrics:
+            avg_route_risk_score:
+              type: average
+              label: Average Route Risk Score
+      - name: operational_risk_tier
+        description: Tier used for operational escalation (critical/high/moderate/watch).
+        meta:
+          dimension:
+            type: string
+            label: Operational Risk Tier
+        tests:
+          - accepted_values:
+              arguments:
+                values: ['critical', 'high', 'moderate', 'watch']
+
+  - name: mart_handling_risk_profile
+    description: Gold mart to track risk performance by handling and customs pattern.
+    meta:
+      group_label: Gold
+      label: Handling Risk Profile
+    columns:
+      - name: handling_priority_rank
+        description: Rank of handling/customs combinations by risk profile.
+        meta:
+          dimension:
+            type: number
+            label: Handling Priority Rank
+        tests:
+          - not_null
+      - name: handling
+        description: Handling mode for this group.
+        meta:
+          dimension:
+            type: string
+            label: Handling Type
+      - name: customs
+        description: Customs severity for this group.
+        meta:
+          dimension:
+            type: string
+            label: Customs Severity
+      - name: risk_rate
+        description: Risk share for each handling/customs group.
+        meta:
+          dimension:
+            type: number
+            label: Risk Rate
+          metrics:
+            avg_risk_rate:
+              type: average
+              label: Average Risk Rate
+      - name: risky_shipments
+        description: Count of risky shipments for each handling/customs group.
+        meta:
+          dimension:
+            type: number
+            label: Risky Shipments
+          metrics:
+            total_risky_shipments:
+              type: sum
+              label: Total Risky Shipments
+      - name: shipment_count
+        description: Total shipment volume for each handling/customs group.
+        meta:
+          dimension:
+            type: number
+            label: Shipment Count
+          metrics:
+            total_shipments:
+              type: sum
+              label: Total Shipments
